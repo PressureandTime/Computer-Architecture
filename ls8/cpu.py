@@ -95,7 +95,14 @@ class CPU:
                 operand_a = None
                 operand_b = None
 
-   
+            if command_string == '0b10000010':
+                op = 'LDI'
+                instruction_size = 3
+            elif command_string == '0b01000111':
+                op = 'PRN'
+                instruction_size = 2
+            elif command_string == '0b00000001':
+                op = 'HLT'
 
-convert = int('0b00001000', 2)
-print(convert)
+            self.alu(op, operand_a, operand_b)
+            self.pc += instruction_size
