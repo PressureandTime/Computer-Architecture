@@ -17,23 +17,28 @@ class CPU:
     def load(self):
         """Load a program into memory."""
 
-        address = 0
+        if len(sys.argv) != 2:
+            print("usage: 02-fileio02.py <filename>")
+            sys.exit(1)
 
-        # For now, we've just hardcoded a program:
+        try:
+            with open(sys.argv[1]) as program:
+                address = 0
+                for line in program:
+                    comment_split = line.split("#")
+                    num = comment_split[0].strip()
 
-        program = [
-            # From print8.ls8
-            0b10000010,  # LDI R0,8
-            0b00000000,  #RO
-            0b00001000,  # 8
-            0b01000111,  # PRN R0
-            0b00000000,  # RO
-            0b00000001,  # HLT
-        ]
+                    if len(num) == 0:
+                        continue
 
-        for instruction in program:
-            self.ram[address] = instruction
-            address += 1
+                    instruction = int(num, 2)
+
+                    self.ram[address] = instruction
+                    address += 1
+
+        except FileNotFoundError:
+            print(f"{sys.argv[0]}: {sys.argv[1]} not found")
+            sys.exit(2)
 
     def ram_read(self, index):
         self.mar = index
@@ -56,6 +61,8 @@ class CPU:
             print(self.reg[reg_a])
         elif op == 'HLT':
             self.running = False
+        elif op == 'MUL':
+            self.reg[reg_a] *= self.reg[reg_b]
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -79,6 +86,7 @@ class CPU:
         """Run the CPU."""
 
         while self.running:
+
             command = self.ram[self.pc]
 
             command_string = format(command, '#010b')
@@ -90,19 +98,25 @@ class CPU:
                 operand_b = self.ram_read(self.pc + 2)
             elif instruction_bits == '01':
                 operand_a = self.ram_read(self.pc + 1)
-                operand_b = None
-            else:
-                operand_a = None
-                operand_b = None
 
-            if command_string == '0b10000010':
-                op = 'LDI'
-                instruction_size = 3
-            elif command_string == '0b01000111':
-                op = 'PRN'
-                instruction_size = 2
-            elif command_string == '0b00000001':
-                op = 'HLT'
+            op_table = {
+                '0b10000010': 'LDI',
+                '0b01000111': 'PRN',
+                '0b00000001': 'HLT',
+                '0b10100010': 'MUL'
+            }
+
+            instrution_size_table = {
+                'LDI': 3,
+                'PRN': 2,
+                'HLT': 0,
+                'MUL': 3,
+            }
+
+            op = op_table[command_string]
+
+            instruction_size = instrution_size_table[op]
 
             self.alu(op, operand_a, operand_b)
+
             self.pc += instruction_size
