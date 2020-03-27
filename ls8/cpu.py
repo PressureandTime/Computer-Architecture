@@ -14,6 +14,7 @@ class CPU:
 
         self.reg[7] = 0xF4
         self.running = True
+        self.flag = 0b000
 
         self.ir = ''
 
@@ -63,6 +64,11 @@ class CPU:
         elif op == 'POP':
             self.reg[reg_a] = self.ram[self.reg[7]]
             self.reg[7] += 1
+        elif op == 'CMP':
+            if self.reg[reg_a] == self.reg[reg_b]:
+                self.flag = 0b001
+            else:
+                self.flag = 0b000
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -118,7 +124,11 @@ class CPU:
                 '0b01000101': 'PUSH',
                 '0b01000110': 'POP',
                 '0b01010000': 'CALL',
-                '0b00010001': 'RET'
+                '0b00010001': 'RET',
+                '0b10100111': 'CMP',
+                '0b01010100': 'JMP',
+                '0b01010101': 'JEQ',
+                '0b01010110': 'JNE',
             }
 
             instrution_size_table = {
@@ -131,9 +141,15 @@ class CPU:
                 'POP': 2,
                 'CALL': 2,
                 'RET': 0,
+                'JMP': 2,
+                'CMP': 3,
+                'JEQ': 2,
+                'JNE': 2,
             }
 
-            instructions_for_setting_the_pc = ['CALL', 'RET']
+            instructions_for_setting_the_pc = [
+                'CALL', 'RET', 'JMP', 'JEQ', 'JNE'
+            ]
 
             self.ir = op_table[command_string]
 
@@ -141,12 +157,25 @@ class CPU:
 
             if self.ir in instructions_for_setting_the_pc:
                 if self.ir == 'CALL':
-                    self.reg[2] = self.pc + 2
-                    self.alu('PUSH', 2)
+                    self.reg[7] = self.pc + 2
+                    self.alu('PUSH', 7)
                     self.pc = self.reg[operand_a]
                 elif self.ir == 'RET':
-                    self.alu('POP', 2)
-                    self.pc = self.reg[2]
+                    self.alu('POP', 7)
+                    self.pc = self.reg[7]
+                elif self.ir == 'JEQ':
+                    if self.flag == 0b001:
+                        self.ir = 'JMP'
+                    else:
+                        self.pc += instruction_size
+                elif self.ir == 'JNE':
+                    if self.flag == 0b000:
+                        self.ir = 'JMP'
+                    else:
+                        self.pc += instruction_size
+
+                if self.ir == 'JMP':
+                    self.pc = self.reg[operand_a]
             else:
 
                 self.pc += instruction_size
